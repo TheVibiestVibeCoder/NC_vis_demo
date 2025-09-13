@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narrative Capture</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 100px;
+            background: #4a5568;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            flex-shrink: 0;
+            transition: width 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            margin: 6px 12px;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateX(2px);
+        }
+
+        .nav-item.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: white;
+            border-radius: 2px;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 6px;
+            fill: currentColor;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-item:hover .nav-icon {
+            transform: scale(1.1);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            text-align: center;
+            line-height: 1.2;
+            font-weight: 500;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .nav-label {
+            opacity: 0;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            min-width: 0;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+            min-height: 70px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #4a5568;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+        .menu-btn:hover {
+            background-color: #f7fafc;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 10px 16px;
+            flex: 1;
+            max-width: 400px;
+            border: 1px solid #e2e8f0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .search-bar:focus-within {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+
+        .search-bar input {
+            border: none;
+            background: transparent;
+            outline: none;
+            margin-left: 10px;
+            width: 100%;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        .search-bar input::placeholder {
+            color: #a0aec0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .header-icon {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            fill: #718096;
+            transition: all 0.2s ease;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .header-icon:hover {
+            fill: #4a5568;
+            background-color: #f7fafc;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-content {
+            flex: 1;
+            padding: 24px;
+            overflow: auto;
+            min-height: 0;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            height: 100%;
+            min-height: calc(100vh - 118px);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            min-height: 400px;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 240px;
+            margin-bottom: 16px;
+        }
+
+        /* Alert Section */
+        .alert {
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+            border: 1px solid #feb2b2;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            flex-shrink: 0;
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            color: #c53030;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .alert-content {
+            color: #2d3748;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .alert-meta {
+            color: #718096;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* Briefing Card */
+        .briefing-date {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .representative-pots {
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .pot-header {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .news-source {
+            display: inline-flex;
+            align-items: center;
+            background: #3182ce;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .narrative-text {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .narrative-text strong {
+            color: #2d3748;
+        }
+
+        .hashtags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .hashtag {
+            color: #3182ce;
+            font-size: 12px;
+            background: #ebf8ff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .avatars {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #cbd5e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .keywords-section {
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .keywords-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .keyword {
+            background: #f7fafc;
+            color: #4a5568;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Spreaders Section */
+        .spreaders-section {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .spreaders-list {
+            margin-top: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .spreader-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.2s ease;
+        }
+
+        .spreader-item:hover {
+            background-color: #f7fafc;
+            margin: 0 -12px;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .spreader-item:last-child {
+            border-bottom: none;
+        }
+
+        .spreader-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #cbd5e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .spreader-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .spreader-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .spreader-desc {
+            font-size: 12px;
+            color: #718096;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .spreader-arrow {
+            color: #cbd5e0;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        /* World Map */
+        .world-map-card {
+            grid-column: 1 / -1;
+            min-height: 350px;
+        }
+
+        .map-container {
+            flex: 1;
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            min-height: 280px;
+        }
+
+        .map-dots {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fbbf24;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        .map-dot:hover {
+            transform: scale(1.5);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+        }
+
+        .stance-detection {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 14px;
+            color: #718096;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        /* Status indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+
+        .status-active { background: #48bb78; }
+        .status-emerging { background: #ed8936; }
+        .status-declining { background: #e53e3e; }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 18px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+            
+            .dashboard-content {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 60px;
+            }
+            
+            .sidebar .nav-label {
+                display: none;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .dashboard-content {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 50px;
+            }
+            
+            .header {
+                padding: 12px 16px;
+            }
+            
+            .card {
+                padding: 16px;
+                min-height: 280px;
+            }
+            
+            .chart-container {
+                height: 160px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .search-bar {
+                display: none;
+            }
+            
+            .dashboard-content {
+                padding: 8px;
+            }
+            
+            .card {
+                padding: 12px;
+            }
+        }
+
+        /* Loading states */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #718096;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #3182ce;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Focus styles */
+        .search-bar input:focus,
+        .nav-item:focus,
+        .menu-btn:focus {
+            outline: 2px solid #3182ce;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar" id="sidebar">
+            <div class="nav-item active">
+                <svg class="nav-icon" viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                </svg>
+                <div class="nav-label">Narrative<br>Trends</div>
+            </div>
+            <div class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                <div class="nav-label">Briefing</div>
+            </div>
+            <div class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24">
+                    <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                </svg>
+                <div class="nav-label">Network</div>
+            </div>
+            <div class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                <div class="nav-label">Spreaders</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <button class="menu-btn" id="menuBtn">☰</button>
+                    <div class="logo">NARRATIVE CAPTURE</div>
+                    <div class="search-bar">
+                        <svg width="16" height="16" fill="#a0aec0" viewBox="0 0 24 24">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                        </svg>
+                        <input type="text" placeholder="search narrative..." />
+                    </div>
+                </div>
+                <div class="header-right">
+                    <svg class="header-icon" viewBox="0 0 24 24">
+                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                    </svg>
+                    <svg class="header-icon" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <div class="dashboard-grid">
+                    <!-- Narrative Trends Card -->
+                    <div class="card">
+                        <div class="card-title">
+                            Narrative Trends
+                            <span class="status-indicator status-active"></span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                        
+                        <div class="alert">
+                            <div class="alert-header">
+                                <span>⚠</span>
+                                Alert
+                            </div>
+                            <div class="alert-content">
+                                Sudden increase detected in the EU digital sovereignty narrative
+                                <div class="alert-meta">Spike observed on Apr. 1</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Narrative Briefing Card -->
+                    <div class="card">
+                        <div class="card-title">Narrative Briefing</div>
+                        <div class="briefing-date">April 25 2024</div>
+                        
+                        <div class="representative-pots">
+                            <div class="pot-header">Representative pots</div>
+                            <div class="news-source">euronews</div>
+                            <div class="narrative-text">
+                                Support for the EU's <strong>digital sovereignty</strong> is rising rapidly.
+                            </div>
+                            
+                            <div class="hashtags">
+                                <span class="hashtag">#Europa</span>
+                                <span class="hashtag">#DigitalSovereignty</span>
+                            </div>
+                            
+                            <div class="avatars">
+                                <div class="avatar" style="background: #e53e3e;">CW</div>
+                                <div class="avatar" style="background: #3182ce;">MM</div>
+                            </div>
+                        </div>
+
+                        <div class="keywords-section">
+                            <div class="keywords-title">Keywords</div>
+                            <div class="keywords">
+                                <span class="keyword">EU</span>
+                                <span class="keyword">digital</span>
+                                <span class="keyword">sovereignty</span>
+                                <span class="keyword">technology</span>
+                            </div>
+                        </div>
+
+                        <div class="spreaders-section">
+                            <div class="keywords-title">Top Spreaders</div>
+                            <div class="spreaders-list">
+                                <div class="spreader-item">
+                                    <div class="spreader-avatar" style="background: #e53e3e;">CW</div>
+                                    <div class="spreader-info">
+                                        <div class="spreader-name">chrisch wiecha</div>
+                                        <div class="spreader-desc">EU digital sovereignty</div>
+                                    </div>
+                                    <div class="spreader-arrow">›</div>
+                                </div>
+                                <div class="spreader-item">
+                                    <div class="spreader-avatar" style="background: #3182ce;">MM</div>
+                                    <div class="spreader-info">
+                                        <div class="spreader-name">Milosz Matuschek</div>
+                                        <div class="spreader-desc">EbergrogLEAI</div>
+                                    </div>
+                                    <div class="spreader-arrow">›</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clustering Card -->
+                    <div class="card">
+                        <div class="card-title">Narrative Clustering</div>
+                        <div class="chart-container">
+                            <canvas id="clusterChart"></canvas>
+                        </div>
+                        
+                        <div class="stance-detection">Stance Detection</div>
+                        
+                        <div class="spreaders-section">
+                            <div class="keywords-title">Top Spreaders</div>
+                            <div class="spreaders-list">
+                                <div class="spreader-item">
+                                    <div class="spreader-avatar" style="background: #e53e3e;">CW</div>
+                                    <div class="spreader-info">
+                                        <div class="spreader-name">christ wiecha</div>
+                                        <div class="spreader-desc">EU digital sovereiggnty</div>
+                                    </div>
+                                    <div class="spreader-arrow">›</div>
+                                </div>
+                                <div class="spreader-item">
+                                    <div class="spreader-avatar" style="background: #3182ce;">MM</div>
+                                    <div class="spreader-info">
+                                        <div class="spreader-name">Milosz Matuschek</div>
+                                        <div class="spreader-desc">EU digital soveensck</div>
+                                    </div>
+                                    <div class="spreader-arrow">›</div>
+                                </div>
+                                <div class="spreader-item">
+                                    <div class="spreader-avatar" style="background: #38a169;">GL</div>
+                                    <div class="spreader-info">
+                                        <div class="spreader-name">Giorgio Leall</div>
+                                        <div class="spreader-desc">Eursijpe glair</div>
+                                    </div>
+                                    <div class="spreader-arrow">›</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- World Map Card -->
+                    <div class="card world-map-card">
+                        <div class="card-title">Global Activity</div>
+                        <div class="map-container">
+                            <div class="map-dots" id="worldMap">
+                                <!-- Dots will be added by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock Data
+        const MOCK_DATA = {
+            trends: {
+                labels: ['Mar 1', 'Mar 15', 'Apr 1', 'Apr 15', 'May 1', 'May 15'],
+                datasets: [
+                    {
+                        data: [0.5, 0.7, 1.0, 1.8, 0.9, 0.8],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        borderWidth: 2
+                    },
+                    {
+                        data: [0.8, 0.6, 0.7, 1.0, 1.2, 1.1],
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        borderWidth: 2
+                    },
+                    {
+                        data: [0.6, 0.8, 0.9, 0.7, 0.6, 0.5],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            clusters: [
+                { x: 30, y: 70, color: '#3b82f6' },
+                { x: 50, y: 50, color: '#3b82f6' },
+                { x: 35, y: 55, color: '#3b82f6' },
+                { x: 40, y: 65, color: '#3b82f6' },
+                { x: 25, y: 75, color: '#3b82f6' },
+                { x: 70, y: 30, color: '#06b6d4' },
+                { x: 65, y: 35, color: '#06b6d4' },
+                { x: 75, y: 25, color: '#06b6d4' },
+                { x: 60, y: 40, color: '#06b6d4' },
+                { x: 80, y: 20, color: '#f59e0b' },
+                { x: 75, y: 25, color: '#f59e0b' },
+                { x: 85, y: 15, color: '#f59e0b' },
+                { x: 20, y: 20, color: '#ef4444' },
+                { x: 15, y: 25, color: '#ef4444' },
+                { x: 25, y: 15, color: '#ef4444' }
+            ],
+            mapLocations: [
+                { left: '25%', top: '35%' }, // Europe
+                { left: '15%', top: '45%' }, // North America
+                { left: '75%', top: '40%' }, // Asia
+                { left: '30%', top: '70%' }, // Africa
+                { left: '85%', top: '65%' }  // Australia
+            ]
+        };
+
+        // Initialize Dashboard
+        function initDashboard() {
+            createTrendsChart();
+            createClusterChart();
+            createWorldMap();
+            setupInteractions();
+        }
+
+        // Create Trends Chart
+        function createTrendsChart() {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: MOCK_DATA.trends,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#718096'
+                            }
+                        },
+                        y: {
+                            grid: { color: '#f1f5f9' },
+                            beginAtZero: true,
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#718096',
+                                callback: function(value) {
+                                    return value.toFixed(1) + 'k';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        // Create Cluster Chart
+        function createClusterChart() {
+            const ctx = document.getElementById('clusterChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        data: MOCK_DATA.clusters,
+                        backgroundColor: MOCK_DATA.clusters.map(c => c.color),
+                        borderColor: MOCK_DATA.clusters.map(c => c.color),
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            display: false,
+                            min: 0,
+                            max: 100
+                        },
+                        y: {
+                            display: false,
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create World Map
+        function createWorldMap() {
+            const mapContainer = document.getElementById('worldMap');
+            MOCK_DATA.mapLocations.forEach((location, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'map-dot';
+                dot.style.left = location.left;
+                dot.style.top = location.top;
+                dot.style.animationDelay = `${index * 0.5}s`;
+                mapContainer.appendChild(dot);
+            });
+        }
+
+        // Setup Interactions
+        function setupInteractions() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Mobile menu toggle
+            const menuBtn = document.getElementById('menuBtn');
+            const sidebar = document.getElementById('sidebar');
+            
+            menuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('mobile-open');
+            });
+
+            // Close mobile menu on outside click
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 480 && 
+                    !sidebar.contains(e.target) && 
+                    !menuBtn.contains(e.target)) {
+                    sidebar.classList.remove('mobile-open');
+                }
+            });
+
+            // Search functionality
+            const searchInput = document.querySelector('.search-bar input');
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                if (query.length > 2) {
+                    highlightSearchResults(query);
+                }
+            });
+
+            // Responsive sidebar collapse
+            function handleResize() {
+                const sidebar = document.getElementById('sidebar');
+                if (window.innerWidth <= 900) {
+                    sidebar.classList.add('collapsed');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                }
+            }
+
+            window.addEventListener('resize', handleResize);
+            handleResize();
+        }
+
+        // Search highlighting
+        function highlightSearchResults(query) {
+            const keywords = document.querySelectorAll('.keyword');
+            keywords.forEach(keyword => {
+                if (keyword.textContent.toLowerCase().includes(query)) {
+                    keyword.style.background = '#fef2b5';
+                    keyword.style.color = '#744210';
+                } else {
+                    keyword.style.background = '#f7fafc';
+                    keyword.style.color = '#4a5568';
+                }
+            });
+        }
+
+        // Performance optimization
+        function optimizePerformance() {
+            // Lazy load charts when they become visible
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const chartId = entry.target.querySelector('canvas')?.id;
+                        if (chartId && !entry.target.dataset.loaded) {
+                            entry.target.dataset.loaded = 'true';
+                            // Chart is already loaded, but this is where you'd load it
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll('.chart-container').forEach(container => {
+                observer.observe(container);
+            });
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initDashboard();
+            optimizePerformance();
+        });
+
+        // Handle window resize for chart responsiveness
+        window.addEventListener('resize', function() {
+            // Charts automatically resize with Chart.js responsive option
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && !e.target.matches('input')) {
+                e.preventDefault();
+                document.querySelector('.search-bar input')?.focus();
+            }
+            
+            if (e.key === 'Escape') {
+                document.querySelector('.search-bar input')?.blur();
+                document.getElementById('sidebar')?.classList.remove('mobile-open');
+            }
+        });
+
+        // Add smooth scrolling for better UX
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        console.log('📊 Narrative Capture Dashboard initialized successfully');
+    </script>
+</body>
+</html>
