@@ -222,7 +222,7 @@
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 24px;
             height: 100%;
             min-height: calc(100vh - 118px);
@@ -238,6 +238,7 @@
             flex-direction: column;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             min-height: 400px;
+            overflow: hidden;
         }
 
         .card:hover {
@@ -332,6 +333,7 @@
             line-height: 1.6;
             margin-bottom: 16px;
             font-size: 14px;
+            overflow-wrap: anywhere;
         }
 
         .narrative-text strong {
@@ -451,6 +453,7 @@
         .spreader-info {
             flex: 1;
             min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .spreader-name {
@@ -458,17 +461,15 @@
             color: #2d3748;
             font-size: 14px;
             margin-bottom: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }
 
         .spreader-desc {
             font-size: 12px;
             color: #718096;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }
 
         .spreader-arrow {
@@ -512,6 +513,32 @@
         .map-dot:hover {
             transform: scale(1.5);
             box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+        }
+
+        /* Actors table */
+        .actors-table-wrapper {
+            overflow-y: auto;
+        }
+
+        .actors-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .actors-table th,
+        .actors-table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+            color: #4a5568;
+            overflow-wrap: anywhere;
+        }
+
+        .actors-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
         }
 
         .stance-detection {
@@ -820,19 +847,32 @@
                         </div>
                     </div>
 
-                    <!-- World Map Card -->
-                    <div class="card world-map-card">
-                        <div class="card-title">Global Activity</div>
-                        <div class="map-container">
-                            <div class="map-dots" id="worldMap">
-                                <!-- Dots will be added by JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                      <!-- World Map Card -->
+                      <div class="card world-map-card">
+                          <div class="card-title">Global Activity</div>
+                          <div class="map-container">
+                              <div class="map-dots" id="worldMap">
+                                  <!-- Dots will be added by JavaScript -->
+                              </div>
+                          </div>
+                      </div>
+
+                      <!-- Actors Analysis Card -->
+                      <div class="card actors-card">
+                          <div class="card-title">Actor Analysis</div>
+                          <div class="actors-table-wrapper">
+                              <table class="actors-table">
+                                  <thead>
+                                      <tr><th>Narrative</th><th>Key Actors</th><th>Sources</th></tr>
+                                  </thead>
+                                  <tbody id="actorsTable"></tbody>
+                              </table>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
 
     <script>
         // Mock Data
@@ -889,22 +929,70 @@
                 { x: 15, y: 25, color: '#ef4444' },
                 { x: 25, y: 15, color: '#ef4444' }
             ],
-            mapLocations: [
-                { left: '25%', top: '35%' }, // Europe
-                { left: '15%', top: '45%' }, // North America
-                { left: '75%', top: '40%' }, // Asia
-                { left: '30%', top: '70%' }, // Africa
-                { left: '85%', top: '65%' }  // Australia
-            ]
-        };
+              mapLocations: [
+                  { left: '25%', top: '35%' }, // Europe
+                  { left: '15%', top: '45%' }, // North America
+                  { left: '75%', top: '40%' }, // Asia
+                  { left: '30%', top: '70%' }, // Africa
+                  { left: '85%', top: '65%' }  // Australia
+              ],
+              narratives: [
+                  {
+                      narrative: 'EU digital sovereignty',
+                      actors: ['EU Commission', 'Tech journalists'],
+                      sources: ['Euronews', 'Politico']
+                  },
+                  {
+                      narrative: 'AI regulation',
+                      actors: ['European Parliament', 'AI startups'],
+                      sources: ['Reuters', 'The Verge']
+                  },
+                  {
+                      narrative: 'Green transition',
+                      actors: ['Climate activists', 'Energy companies'],
+                      sources: ['Guardian', 'Bloomberg']
+                  },
+                  {
+                      narrative: 'Cybersecurity threats',
+                      actors: ['Security firms', 'Hacktivists'],
+                      sources: ['Wired', 'ZDNet']
+                  },
+                  {
+                      narrative: 'Data privacy',
+                      actors: ['Privacy advocates', 'Big Tech'],
+                      sources: ['CNBC', 'TechCrunch']
+                  },
+                  {
+                      narrative: 'Disinformation campaigns',
+                      actors: ['Fact-checkers', 'State media'],
+                      sources: ['BBC', 'Al Jazeera']
+                  },
+                  {
+                      narrative: 'Crypto adoption',
+                      actors: ['Financial regulators', 'Crypto influencers'],
+                      sources: ['CoinDesk', 'Financial Times']
+                  },
+                  {
+                      narrative: 'Tech nationalism',
+                      actors: ['National governments', 'Policy think-tanks'],
+                      sources: ['Politico', 'Washington Post']
+                  },
+                  {
+                      narrative: 'Quantum leadership',
+                      actors: ['Research labs', 'Tech giants'],
+                      sources: ['Nature', 'MIT Tech Review']
+                  }
+              ]
+          };
 
         // Initialize Dashboard
-        function initDashboard() {
-            createTrendsChart();
-            createClusterChart();
-            createWorldMap();
-            setupInteractions();
-        }
+      function initDashboard() {
+          createTrendsChart();
+          createClusterChart();
+          createWorldMap();
+          populateActorsAnalysis();
+          setupInteractions();
+      }
 
         // Create Trends Chart
         function createTrendsChart() {
@@ -985,17 +1073,28 @@
         }
 
         // Create World Map
-        function createWorldMap() {
-            const mapContainer = document.getElementById('worldMap');
-            MOCK_DATA.mapLocations.forEach((location, index) => {
-                const dot = document.createElement('div');
-                dot.className = 'map-dot';
-                dot.style.left = location.left;
-                dot.style.top = location.top;
-                dot.style.animationDelay = `${index * 0.5}s`;
-                mapContainer.appendChild(dot);
-            });
-        }
+      function createWorldMap() {
+          const mapContainer = document.getElementById('worldMap');
+          MOCK_DATA.mapLocations.forEach((location, index) => {
+              const dot = document.createElement('div');
+              dot.className = 'map-dot';
+              dot.style.left = location.left;
+              dot.style.top = location.top;
+              dot.style.animationDelay = `${index * 0.5}s`;
+              mapContainer.appendChild(dot);
+          });
+      }
+
+      // Populate actors analysis table
+      function populateActorsAnalysis() {
+          const table = document.getElementById('actorsTable');
+          if (!table) return;
+          MOCK_DATA.narratives.forEach(item => {
+              const row = document.createElement('tr');
+              row.innerHTML = `<td>${item.narrative}</td><td>${item.actors.join(', ')}</td><td>${item.sources.join(', ')}</td>`;
+              table.appendChild(row);
+          });
+      }
 
         // Setup Interactions
         function setupInteractions() {
